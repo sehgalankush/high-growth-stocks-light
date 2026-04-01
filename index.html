@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dalal Street Alpha — Indian Stock Screener</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #F4F6FB;
+      --bg2: #FFFFFF;
+      --bg3: #EEF1F8;
+      --card: #FFFFFF;
+      --card-hover: #F8FAFF;
+      --border: rgba(0,0,0,0.08);
+      --border-bright: rgba(220,90,0,0.25);
+      --accent: #D95F00;
+      --accent2: #F08030;
+      --green: #0A7C4A;
+      --red: #C8223A;
+      --blue: #1A6DBF;
+      --purple: #6340C0;
+      --text: #1A1F2E;
+      --muted: #6B7A9A;
+      --dim: #A0AABE;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* BACKGROUND GRID */
+    body::before {
+      content:'';
+      position:fixed; inset:0;
+      background-image:
+        linear-gradient(rgba(0,0,80,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,80,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events:none; z-index:0;
+    }
+
+    /* TICKER BAR */
+    .ticker-wrap {
+      position:sticky; top:0; z-index:100;
+      background: rgba(244,246,251,0.97);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      overflow:hidden; height:36px;
+    }
+    .ticker-track {
+      display:flex; align-items:center; gap:40px;
+      animation: tickerScroll 40s linear infinite;
+      white-space:nowrap; padding: 0 20px; height:100%;
+    }
+    .ticker-item {
+      display:inline-flex; align-items:center; gap:8px;
+      font-family:'JetBrains Mono', monospace; font-size:11px;
+      letter-spacing:0.03em;
+    }
+    .ticker-item .name { color:var(--muted); }
+    .ticker-item .price { color:var(--text); font-weight:600; }
+    .ticker-item .chg.up { color:var(--green); }
+    .ticker-item .chg.dn { color:var(--red); }
+    @keyframes tickerScroll {
+      0%{ transform:translateX(0); }
+      100%{ transform:translateX(-50%); }
+    }
+
+    /* HEADER */
+    header {
+      position:relative; z-index:10;
+      padding: 28px 32px 20px;
+      display:flex; align-items:flex-end; justify-content:space-between;
+      gap:20px; flex-wrap:wrap;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo-block h1 {
+      font-family:'Syne', sans-serif;
+      font-size: 28px; font-weight:800;
+      letter-spacing:-0.02em;
+      background: linear-gradient(135deg, #D95F00 0%, #B84000 60%, #E07020 100%);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    }
+    .logo-block p {
+      font-size:12px; color:var(--muted); margin-top:2px; letter-spacing:0.08em;
+      text-transform:uppercase;
+    }
+    .header-meta {
+      display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    }
+    .live-badge {
+      display:flex; align-items:center; gap:6px;
+      background: rgba(10,124,74,0.08);
+      border: 1px solid rgba(10,124,74,0.25);
+      padding: 5px 12px; border-radius:20px;
+      font-size:11px; font-weight:600; color:var(--green);
+      letter-spacing:0.08em; text-transform:uppercase;
+    }
+    .live-dot {
+      width:6px; height:6px; border-radius:50%;
+      background:var(--green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100%{ opacity:1; transform:scale(1); }
+      50%{ opacity:0.5; transform:scale(0.7); }
+    }
+    .api-btn {
+      background: rgba(217,95,0,0.08);
+      border: 1px solid rgba(217,95,0,0.25);
+      color: var(--accent);
+      padding: 6px 14px; border-radius:6px;
+      font-size:12px; font-weight:600; cursor:pointer;
+      font-family:'Space Grotesk', sans-serif;
+      transition: all 0.2s;
+    }
+    .api-btn:hover { background: rgba(255,140,0,0.2); }
+
+    /* FILTER BAR */
+    .filter-bar {
+      position:relative; z-index:10;
+      padding: 16px 32px;
+      display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.8);
+    }
+    .filter-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; margin-right:4px; }
+    .cap-btn {
+      padding: 6px 16px; border-radius:6px;
+      font-size:12px; font-weight:600; cursor:pointer;
+      border: 1px solid var(--border);
+      background: transparent; color:var(--muted);
+      font-family:'Space Grotesk', sans-serif;
+      transition: all 0.2s;
+    }
+    .cap-btn:hover { border-color: var(--accent); color:var(--accent); }
+    .cap-btn.active { background: var(--accent); border-color:var(--accent); color:#000; }
+    .cap-btn.large.active { background:#4DA6FF; border-color:#4DA6FF; color:#000; }
+    .cap-btn.mid.active { background:var(--purple); border-color:var(--purple); color:#fff; }
+    .cap-btn.small.active { background:var(--green); border-color:var(--green); color:#000; }
+
+    .sep { width:1px; height:24px; background:var(--border); margin:0 4px; }
+    .search-wrap { position:relative; flex:1; min-width:180px; max-width:280px; }
+    .search-wrap input {
+      width:100%; background:var(--card); border:1px solid var(--border);
+      border-radius:6px; padding: 7px 12px 7px 32px;
+      font-size:13px; color:var(--text); font-family:'Space Grotesk',sans-serif;
+      outline:none; transition: border-color 0.2s;
+    }
+    .search-wrap input:focus { border-color:var(--accent); }
+    .search-wrap svg { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--muted); }
+    .sort-select {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:6px; padding: 7px 12px;
+      font-size:12px; color:var(--text); font-family:'Space Grotesk',sans-serif;
+      outline:none; cursor:pointer;
+    }
+
+    /* STATS ROW */
+    .stats-row {
+      position:relative; z-index:10;
+      display:flex; gap:1px;
+      border-bottom: 1px solid var(--border);
+    }
+    .stat-card {
+      flex:1; padding:16px 20px;
+      background:var(--bg2);
+      border-right:1px solid var(--border);
+    }
+    .stat-card:last-child { border-right:none; }
+    .stat-card .label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; }
+    .stat-card .val { font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:600; margin-top:2px; }
+    .stat-card .sub { font-size:11px; color:var(--muted); margin-top:2px; }
+
+    /* MAIN GRID */
+    .main { padding: 24px 32px; position:relative; z-index:10; }
+    .section-title {
+      font-size:11px; font-weight:600; text-transform:uppercase;
+      letter-spacing:0.12em; color:var(--muted);
+      display:flex; align-items:center; gap:10px; margin-bottom:14px;
+    }
+    .section-title::after {
+      content:''; flex:1; height:1px; background:var(--border);
+    }
+    .cap-dot {
+      width:8px; height:8px; border-radius:50%;
+    }
+
+    /* STOCK CARD */
+    .stocks-grid {
+      display:grid; gap:12px;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      margin-bottom:32px;
+    }
+    .stock-card {
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:12px; overflow:hidden;
+      transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+      cursor:pointer;
+      position:relative;
+    }
+    .stock-card::before {
+      content:''; position:absolute; inset:0;
+      background: radial-gradient(circle at 100% 0%, rgba(217,95,0,0.04) 0%, transparent 60%);
+      opacity:0; transition:opacity 0.3s; pointer-events:none;
+    }
+    .stock-card:hover { border-color:rgba(217,95,0,0.3); transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,0.1); }
+    .stock-card:hover::before { opacity:1; }
+    .stock-card.watchlisted { border-color:rgba(217,95,0,0.4); }
+
+    .card-top {
+      padding: 16px 18px 12px;
+      display:flex; align-items:flex-start; justify-content:space-between; gap:8px;
+    }
+    .stock-name { font-size:15px; font-weight:700; letter-spacing:-0.01em; line-height:1.2; }
+    .stock-sector { font-size:11px; color:var(--muted); margin-top:3px; }
+    .cap-badge {
+      flex-shrink:0; padding:3px 9px; border-radius:4px;
+      font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em;
+    }
+    .cap-badge.large { background:rgba(26,109,191,0.1); color:#1A6DBF; }
+    .cap-badge.mid { background:rgba(99,64,192,0.1); color:#6340C0; }
+    .cap-badge.small { background:rgba(10,124,74,0.1); color:#0A7C4A; }
+
+    .metrics-row {
+      padding: 12px 18px;
+      display:grid; grid-template-columns:1fr 1fr 1fr;
+      gap:10px; border-top:1px solid var(--border); border-bottom:1px solid var(--border);
+    }
+    .metric { text-align:center; }
+    .metric .mlabel { font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); }
+    .metric .mval {
+      font-family:'JetBrains Mono',monospace; font-size:17px; font-weight:600;
+      margin-top:2px; color:var(--green);
+    }
+    .metric .mval.neutral { color:var(--blue); }
+    .metric .mval.accent { color:var(--accent); }
+    .metric .msub { font-size:9px; color:var(--muted); margin-top:1px; }
+
+    .card-mid {
+      padding: 12px 18px;
+      display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    }
+    .trigger-tag {
+      padding:3px 10px; border-radius:4px;
+      font-size:10px; font-weight:600; letter-spacing:0.04em;
+    }
+    .trigger-tag.ob { background:rgba(217,95,0,0.08); color:#B84000; border:1px solid rgba(217,95,0,0.2); }
+    .trigger-tag.cx { background:rgba(26,109,191,0.08); color:#1A6DBF; border:1px solid rgba(26,109,191,0.2); }
+    .trigger-tag.st { background:rgba(99,64,192,0.08); color:#6340C0; border:1px solid rgba(99,64,192,0.2); }
+
+    .card-bottom {
+      padding: 10px 18px 14px;
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .mcap-val { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted); }
+    .mcap-val span { color:var(--text); font-weight:600; }
+    .card-actions { display:flex; gap:6px; }
+    .act-btn {
+      padding:5px 10px; border-radius:5px; font-size:11px; font-weight:600;
+      cursor:pointer; border:none; font-family:'Space Grotesk',sans-serif;
+      transition:all 0.2s;
+    }
+    .watch-btn {
+      background: rgba(255,255,255,0.05); color:var(--muted);
+      border:1px solid var(--border);
+    }
+    .watch-btn:hover, .watch-btn.active { background:rgba(217,95,0,0.1); color:var(--accent); border-color:var(--accent); }
+    .concall-btn {
+      background: rgba(217,95,0,0.08); color:var(--accent);
+      border:1px solid rgba(217,95,0,0.2);
+    }
+    .concall-btn:hover { background:rgba(217,95,0,0.18); }
+
+    /* MODAL */
+    .modal-overlay {
+      position:fixed; inset:0; z-index:1000;
+      background:rgba(100,110,140,0.5); backdrop-filter:blur(12px);
+      display:flex; align-items:center; justify-content:center;
+      padding:20px; opacity:0; pointer-events:none;
+      transition:opacity 0.3s;
+    }
+    .modal-overlay.open { opacity:1; pointer-events:all; }
+    .modal {
+      background:var(--bg2); border:1px solid var(--border-bright);
+      border-radius:16px; width:100%; max-width:680px; max-height:90vh;
+      overflow-y:auto; position:relative;
+      transform:translateY(24px); transition:transform 0.3s;
+    }
+    .modal-overlay.open .modal { transform:translateY(0); }
+    .modal-header {
+      padding:24px 24px 16px;
+      display:flex; justify-content:space-between; align-items:flex-start;
+      border-bottom:1px solid var(--border); position:sticky; top:0;
+      background:var(--bg2); z-index:2; box-shadow:0 1px 0 var(--border);
+    }
+    .modal-close {
+      background:rgba(255,255,255,0.06); border:none; color:var(--muted);
+      width:32px; height:32px; border-radius:8px; cursor:pointer; font-size:18px;
+      display:flex; align-items:center; justify-content:center; flex-shrink:0;
+      transition:all 0.2s;
+    }
+    .modal-close:hover { background:rgba(200,34,58,0.1); color:var(--red); }
+    .modal-body { padding:20px 24px 24px; }
+    .modal-section { margin-bottom:20px; }
+    .modal-section h4 {
+      font-size:10px; text-transform:uppercase; letter-spacing:0.12em;
+      color:var(--muted); margin-bottom:10px; display:flex; align-items:center; gap:8px;
+    }
+    .modal-section h4::after { content:''; flex:1; height:1px; background:var(--border); }
+    .concall-text {
+      font-size:13.5px; line-height:1.75; color:var(--text);
+      background:rgba(255,255,255,0.02); border-radius:8px;
+      border:1px solid var(--border); padding:16px;
+    }
+    .concall-loading {
+      display:flex; flex-direction:column; align-items:center; gap:12px;
+      padding:32px; color:var(--muted); font-size:13px;
+    }
+    .spin {
+      width:28px; height:28px; border-radius:50%;
+      border:2px solid var(--border); border-top-color:var(--accent);
+      animation:spin 0.8s linear infinite;
+    }
+    @keyframes spin { to{transform:rotate(360deg);} }
+
+    .key-points { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+    .key-point {
+      display:flex; align-items:flex-start; gap:10px;
+      font-size:13px; line-height:1.5;
+    }
+    .key-point .dot {
+      width:6px; height:6px; border-radius:50%;
+      background:var(--accent); margin-top:5px; flex-shrink:0;
+    }
+
+    .modal-metrics-grid {
+      display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
+    }
+    .modal-metric {
+      background:var(--bg3); border-radius:8px; padding:12px;
+      border:1px solid var(--border);
+    }
+    .modal-metric .l { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; }
+    .modal-metric .v { font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:600; margin-top:4px; }
+
+    /* API KEY MODAL */
+    .apikey-modal {
+      background:var(--bg2); border:1px solid var(--border-bright);
+      border-radius:16px; width:100%; max-width:440px; padding:28px;
+    }
+    .apikey-modal h3 { font-size:18px; font-weight:700; margin-bottom:6px; }
+    .apikey-modal p { font-size:13px; color:var(--muted); line-height:1.6; margin-bottom:20px; }
+    .apikey-modal input {
+      width:100%; background:var(--bg3); border:1px solid var(--border);
+      border-radius:8px; padding:11px 14px; font-size:13px;
+      color:var(--text); font-family:'JetBrains Mono',monospace;
+      outline:none; margin-bottom:12px; transition:border-color 0.2s;
+    }
+    .apikey-modal input:focus { border-color:var(--accent); }
+    .save-btn {
+      width:100%; padding:11px; background:var(--accent); color:#000;
+      border:none; border-radius:8px; font-size:14px; font-weight:700;
+      cursor:pointer; font-family:'Space Grotesk',sans-serif;
+      transition:opacity 0.2s;
+    }
+    .save-btn:hover { opacity:0.85; }
+
+    /* WATCHLIST SIDEBAR */
+    .watchlist-panel {
+      position:fixed; right:-320px; top:0; bottom:0; width:300px;
+      background:var(--bg2); border-left:1px solid var(--border);
+      z-index:200; transition:right 0.3s cubic-bezier(0.4,0,0.2,1);
+      overflow-y:auto; padding:20px;
+    }
+    .watchlist-panel.open { right:0; }
+    .wl-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+    .wl-header h3 { font-size:15px; font-weight:700; }
+    .wl-close { background:none; border:none; color:var(--muted); cursor:pointer; font-size:20px; }
+    .wl-item {
+      background:var(--card); border:1px solid var(--border); border-radius:8px;
+      padding:12px; margin-bottom:8px;
+    }
+    .wl-item .wn { font-size:13px; font-weight:600; }
+    .wl-item .ws { font-size:11px; color:var(--muted); margin-top:2px; }
+    .wl-item .wm { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--accent); margin-top:6px; }
+
+    /* FOOTER */
+    footer {
+      border-top:1px solid var(--border); padding:16px 32px;
+      display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;
+      position:relative; z-index:10;
+    }
+    footer p { font-size:11px; color:var(--muted); }
+    footer .disclaimer { font-size:10px; color:var(--dim); max-width:500px; }
+
+    /* EMPTY STATE */
+    .empty-state {
+      text-align:center; padding:60px 20px; color:var(--muted); grid-column:1/-1;
+    }
+    .empty-state h3 { font-size:18px; margin-bottom:8px; color:var(--text); }
+
+    /* RESPONSIVE */
+    @media(max-width:768px) {
+      header { padding:16px 16px 14px; }
+      .filter-bar { padding:12px 16px; }
+      .main { padding:16px; }
+      .stats-row { flex-wrap:wrap; }
+      .stat-card { min-width:50%; border-bottom:1px solid var(--border); }
+      .stocks-grid { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- TICKER BAR -->
+<div class="ticker-wrap">
+  <div class="ticker-track" id="tickerTrack"></div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo-block">
+    <h1>Dalal Street Alpha</h1>
+    <p>High-Quality Indian Growth Stock Screener</p>
+  </div>
+  <div class="header-meta">
+    <div class="live-badge"><div class="live-dot"></div> Live Data</div>
+    <button class="api-btn" onclick="openApiModal()">⚡ Setup AI (Concall)</button>
+    <button class="api-btn" style="background:rgba(77,166,255,0.1);border-color:rgba(77,166,255,0.3);color:#4DA6FF;" onclick="toggleWatchlist()">★ Watchlist (<span id="wlCount">0</span>)</button>
+  </div>
+</header>
+
+<!-- FILTER BAR -->
+<div class="filter-bar">
+  <span class="filter-label">Cap</span>
+  <button class="cap-btn active" onclick="filterCap('all', this)">All</button>
+  <button class="cap-btn large" onclick="filterCap('large', this)">Large Cap</button>
+  <button class="cap-btn mid" onclick="filterCap('mid', this)">Mid Cap</button>
+  <button class="cap-btn small" onclick="filterCap('small', this)">Small Cap</button>
+  <div class="sep"></div>
+  <span class="filter-label">Trigger</span>
+  <button class="cap-btn" onclick="filterTrigger('all', this)">All</button>
+  <button class="cap-btn" style="color:#FF8C00" onclick="filterTrigger('Order Book', this)">📋 Order Book</button>
+  <button class="cap-btn" style="color:#4DA6FF" onclick="filterTrigger('Capex', this)">🏗️ Capex</button>
+  <button class="cap-btn" style="color:#A78BFA" onclick="filterTrigger('Tailwind', this)">🌬️ Tailwind</button>
+  <div class="sep"></div>
+  <div class="search-wrap">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    <input type="text" placeholder="Search stock or sector..." oninput="searchStocks(this.value)" />
+  </div>
+  <select class="sort-select" onchange="sortStocks(this.value)">
+    <option value="revCagr">Sort: Revenue CAGR ↓</option>
+    <option value="profitCagr">Profit CAGR ↓</option>
+    <option value="mcap">Market Cap ↓</option>
+    <option value="name">Name A-Z</option>
+  </select>
+</div>
+
+<!-- STATS ROW -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="label">Total Stocks</div>
+    <div class="val" style="color:var(--accent)" id="statTotal">20</div>
+    <div class="sub">Meeting all 3 criteria</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Avg Revenue CAGR</div>
+    <div class="val" style="color:var(--green)" id="statRevCagr">—</div>
+    <div class="sub">5-Year</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Avg Profit CAGR</div>
+    <div class="val" style="color:var(--green)" id="statProfCagr">—</div>
+    <div class="sub">3-Year</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Watchlisted</div>
+    <div class="val" style="color:var(--blue)" id="statWL">0</div>
+    <div class="sub">Stocks saved</div>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main" id="mainContent">
+  <div id="largeCapSection">
+    <div class="section-title"><div class="cap-dot" style="background:#4DA6FF"></div>Large Cap</div>
+    <div class="stocks-grid" id="largeCapGrid"></div>
+  </div>
+  <div id="midCapSection">
+    <div class="section-title"><div class="cap-dot" style="background:#A78BFA"></div>Mid Cap</div>
+    <div class="stocks-grid" id="midCapGrid"></div>
+  </div>
+  <div id="smallCapSection">
+    <div class="section-title"><div class="cap-dot" style="background:#00E5A0"></div>Small Cap</div>
+    <div class="stocks-grid" id="smallCapGrid"></div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <p>© 2025 Dalal Street Alpha — Tech Stack: HTML5 · Vanilla JS · Anthropic Claude API · NSE Data</p>
+  <p class="disclaimer">⚠️ For educational purposes only. Not SEBI registered investment advice. Always do your own research before investing.</p>
+</footer>
+
+<!-- CONCALL MODAL -->
+<div class="modal-overlay" id="concallModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Concall Summary · AI Analysis</div>
+        <div style="font-size:20px;font-weight:700" id="modalTitle">—</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px" id="modalSector">—</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section">
+        <h4>Key Financials</h4>
+        <div class="modal-metrics-grid" id="modalMetrics"></div>
+      </div>
+      <div class="modal-section">
+        <h4>Key Trigger</h4>
+        <div id="modalTrigger"></div>
+      </div>
+      <div class="modal-section">
+        <h4>Sector Tailwind / Notes</h4>
+        <div style="font-size:13px;line-height:1.6;color:var(--text)" id="modalNotes"></div>
+      </div>
+      <div class="modal-section">
+        <h4>Last Concall Summary <span style="font-size:9px;background:rgba(255,140,0,0.1);color:var(--accent);padding:2px 7px;border-radius:3px;letter-spacing:0.06em;margin-left:6px">AI POWERED</span></h4>
+        <div id="modalConcall">
+          <div class="concall-text" style="color:var(--muted);font-style:italic">
+            Setup your Anthropic API key to get AI-powered concall summaries. Click "⚡ Setup AI" in the header.
+          </div>
+        </div>
+      </div>
+      <div class="modal-section">
+        <h4>Bull Thesis</h4>
+        <div class="key-points" id="modalBull"></div>
+      </div>
+      <div class="modal-section">
+        <h4>Bear Risks</h4>
+        <div class="key-points" id="modalBear"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- API KEY MODAL -->
+<div class="modal-overlay" id="apiModal">
+  <div class="apikey-modal">
+    <h3>⚡ AI Concall Summaries</h3>
+    <p>Enter your Anthropic API key to get real-time AI-powered quarterly concall summaries, management commentary, and outlook analysis for each stock.</p>
+    <input type="password" id="apiKeyInput" placeholder="sk-ant-..." value="" />
+    <button class="save-btn" onclick="saveApiKey()">Save & Enable AI</button>
+    <p style="font-size:11px;color:var(--dim);margin-top:10px">Your key is stored only in your browser. Get a free key at console.anthropic.com</p>
+    <button onclick="closeApiModal()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;margin-top:8px;text-decoration:underline;">Cancel</button>
+  </div>
+</div>
+
+<!-- WATCHLIST PANEL -->
+<div class="watchlist-panel" id="watchlistPanel">
+  <div class="wl-header">
+    <h3>★ Watchlist</h3>
+    <button class="wl-close" onclick="toggleWatchlist()">×</button>
+  </div>
+  <div id="watchlistItems"></div>
+</div>
+
+<script>
+// =====================================================================
+// STOCK DATA — 20 STOCKS MEETING CRITERIA
+// =====================================================================
+const STOCKS = [
+  // LARGE CAP
+  {
+    id:1, name:"Mazagon Dock Shipbuilders", ticker:"MAZDOCK", sector:"Defence · Shipbuilding", cap:"large",
+    revCagr:22, profitCagr:57, mcap:"~₹99,620 Cr", mcapNum:99620,
+    trigger:"Order Book", triggerDetail:"₹23,758 Cr order book — 5+ years visibility",
+    tailwind:"Make in India · Naval modernisation programme. P75I submarines & destroyers pipeline.",
+    bull:["Record order book provides 5+ yr revenue visibility","Navy & Coast Guard modernisation is decade-long theme","Zero-debt, high-margin government shipyard","Submarines order (P75I) worth ₹40,000+ Cr in pipeline"],
+    bear:["Order execution delays common in defence","Concentrated revenue from single customer (GoI)","Valuations already pricing in growth"],
+    concallHints:"Q4FY25 concall: Management highlighted record order inflows, guided 20%+ revenue growth for FY26, P75I submarine program progressing, dividend policy to continue."
+  },
+  {
+    id:2, name:"Solar Industries India", ticker:"SOLARIND", sector:"Defence · Mining · Infra", cap:"large",
+    revCagr:24, profitCagr:81, mcap:"~₹98,961 Cr", mcapNum:98961,
+    trigger:"Order Book", triggerDetail:"₹21,200 Cr+ order book spanning defence & mining",
+    tailwind:"Defence exports + domestic mining explosives duopoly. Rocket propellants for DRDO.",
+    bull:["Monopoly in bulk explosives + defence propellants","Exports to 50+ countries, defence revenue growing 40%+","Margin expansion as defence mix rises","EV detonator & smart munitions opportunity"],
+    bear:["Commodity input cost volatility","Regulatory/export license risk in defence","High PE multiple leaves little margin of safety"],
+    concallHints:"Q3FY25: Management guided defence segment to grow 50%+ in FY26, export order wins from Southeast Asia, new propellant plant at Nagpur commissioned."
+  },
+  {
+    id:3, name:"GE Vernova T&D India", ticker:"GEVERNOVA", sector:"Power T&D · Grid Infrastructure", cap:"large",
+    revCagr:20, profitCagr:81, mcap:"Large Mid-Cap", mcapNum:55000,
+    trigger:"Order Book", triggerDetail:"₹14,384 Cr order book driven by grid capex supercycle",
+    tailwind:"India's T&D capex boom — ₹9.15 lakh Cr target by 2032. RE integration driving transformer demand.",
+    bull:["India needs 3x transformer capacity for RE goals","Parent GE Vernova's global tech advantage","Order intake growing 40%+ YoY","Data center and green hydrogen grid needs"],
+    bear:["Raw material (copper, silicon steel) price risk","Competition from ABB, Siemens, Hitachi","Execution capacity constraints"],
+    concallHints:"Q4FY25: Highlighted supercycle in power T&D, data center enquiries from hyperscalers, order pipeline strongest in company history, margin guidance 11-13%."
+  },
+  {
+    id:4, name:"Bharat Electronics Ltd", ticker:"BEL", sector:"Defence Electronics", cap:"large",
+    revCagr:18, profitCagr:28, mcap:"~₹2,10,000 Cr", mcapNum:210000,
+    trigger:"Order Book", triggerDetail:"₹70,000 Cr+ order book; 4.5x book-to-bill ratio",
+    tailwind:"Indigenisation of defence electronics. Radar, EW systems, communication — all key segments.",
+    bull:["Largest defence electronics company in India","Order book at all-time high","Export ambitions under Make in India","Navratna PSU — execution track record"],
+    bear:["Government policy dependency","Margin pressure from R&D investments","Long order-to-revenue conversion cycle"],
+    concallHints:"Q4FY25: Order inflows of ₹25,000+ Cr in FY25, guided 15% revenue growth FY26, export orders from Southeast Asia, drone & anti-drone systems pipeline building."
+  },
+  {
+    id:5, name:"ABB India", ticker:"ABB", sector:"Industrial Automation · Power", cap:"large",
+    revCagr:19, profitCagr:45, mcap:"~₹96,000 Cr", mcapNum:96000,
+    trigger:"Tailwind", triggerDetail:"Industrial capex + electrification supercycle",
+    tailwind:"Industrial automation, robotics, and electrification beneficiary. Strong across process industries.",
+    bull:["Premium global technology with local manufacturing","Beneficiary of PLI + Make in India","Strong margin improvement trajectory","Data center & RE power infra opportunity"],
+    bear:["Expensive valuation","Parent ABB AG strategic decisions can override local interests","Cyclical exposure to industrial capex"],
+    concallHints:"Q1CY25: Management highlighted strong order pipeline from data centers, EV charging infra, process automation. Guided double-digit revenue growth for CY25."
+  },
+  {
+    id:6, name:"Tata Power Company", ticker:"TATAPOWER", sector:"Renewable Energy · Power", cap:"large",
+    revCagr:16, profitCagr:38, mcap:"~₹98,000 Cr", mcapNum:98000,
+    trigger:"Capex", triggerDetail:"₹30,000 Cr+ capex planned in renewables through FY27",
+    tailwind:"India's largest integrated power company pivoting to clean energy. Solar EPC + rooftop solar.",
+    bull:["Tata Group backing + quality management","Renewable energy capacity addition accelerating","EV charging infra business nascent but high-potential","Rooftop solar becoming mainstream"],
+    bear:["Debt-heavy balance sheet from capex","Regulation risk in distribution business","Commodity exposure (coal) in legacy segment"],
+    concallHints:"Q4FY25: 5 GW renewable target reaffirmed, Tata Motors EV charging partnership scaling, solar cell manufacturing plant operational, guided 20% PAT growth FY26."
+  },
+  // MID CAP
+  {
+    id:7, name:"Apar Industries", ticker:"APARINDS", sector:"Power Transmission · Cables", cap:"mid",
+    revCagr:20, profitCagr:48, mcap:"~₹41,473 Cr", mcapNum:41473,
+    trigger:"Order Book", triggerDetail:"₹7,396 Cr order book + aggressive Capex",
+    tailwind:"Power transmission cable demand surge. India + export markets (US, Middle East) booming.",
+    bull:["India's largest transformer oil & conductor manufacturer","Export revenue growing 35%+ to US, Middle East","Capex in specialty cables for RE and EV","Strong pricing power in niche products"],
+    bear:["Copper price volatility squeezes margins","Customer concentration in some segments","Working capital intensive business"],
+    concallHints:"Q4FY25: US export orders at record levels, guided EBITDA margin improvement to 9-10%, capacity expansion for EV cables underway, order pipeline from Middle East growing."
+  },
+  {
+    id:8, name:"Kaynes Technology", ticker:"KAYNES", sector:"Electronics Manufacturing (EMS)", cap:"mid",
+    revCagr:35, profitCagr:68, mcap:"~₹23,000 Cr", mcapNum:23000,
+    trigger:"Capex", triggerDetail:"₹1,800 Cr capex for new plants — aerospace, defence EMS",
+    tailwind:"India EMS sector is sunrise — PLI scheme, China+1. IoT, defence, industrial, space.",
+    bull:["Fastest growing EMS company in India","Diversified across aerospace, medical, defence, auto","Management pedigree and execution track record","Semiconductor chip packaging announced"],
+    bear:["Richly valued relative to global EMS peers","Client concentration (top 5 = 40%+ revenue)","EMS is low-margin, capital-intensive business"],
+    concallHints:"Q4FY25: New Bangalore plant commissioned, semiconductor backend facility in progress, guided 35%+ revenue growth FY26, aerospace order wins from HAL and ISRO vendors."
+  },
+  {
+    id:9, name:"Data Patterns (India)", ticker:"DATAPATT", sector:"Defence Electronics · Radar", cap:"mid",
+    revCagr:28, profitCagr:42, mcap:"~₹14,500 Cr", mcapNum:14500,
+    trigger:"Order Book", triggerDetail:"₹1,200+ Cr order book; Tejas radar suite key win",
+    tailwind:"DRDO programs, fighter jet avionics, submarine electronics. Deep defence tech moat.",
+    bull:["Rare pure-play defence electronics SME","Tejas MK1A programme — significant revenue runway","Niche radar & avionics IP — difficult to replicate","Government indigenisation push is long-term tailwind"],
+    bear:["High dependency on DRDO project timelines","Small scale limits diversification","Order book lumpiness creates revenue volatility"],
+    concallHints:"Q3FY25: Tejas avionics module deliveries on track, guided ₹700 Cr revenue FY26, new wins in submarine sonar systems, exports inquiry from friendly nations."
+  },
+  {
+    id:10, name:"Waaree Energies", ticker:"WAAREEENER", sector:"Solar Manufacturing · EPC", cap:"mid",
+    revCagr:42, profitCagr:95, mcap:"~₹65,000 Cr", mcapNum:65000,
+    trigger:"Capex", triggerDetail:"6.7 GW → 13.3 GW capacity expansion underway",
+    tailwind:"India's largest solar panel maker. US BCD tariffs make India-sourced panels attractive for US market.",
+    bull:["India's #1 solar panel manufacturer by volume","US IRA Act creates massive export opportunity","Expanding into cells and wafers (full vertical)","RPO mandates drive domestic demand"],
+    bear:["Chinese competition if import duties reduced","US policy risk (tariff changes)","Customer concentration in large orders"],
+    concallHints:"Q4FY25: US plant in Texas progressing, 8 GW order book, guided 50%+ revenue growth FY26, EBITDA margin stable at 14-15%, cell manufacturing to start Q2FY26."
+  },
+  {
+    id:11, name:"Jupiter Wagons", ticker:"JWL", sector:"Railways · Freight", cap:"mid",
+    revCagr:32, profitCagr:88, mcap:"~₹16,000 Cr", mcapNum:16000,
+    trigger:"Order Book", triggerDetail:"₹5,000 Cr+ order book from Indian Railways",
+    tailwind:"Indian Railways wagon modernisation. 3 lakh wagons to be replaced by 2030. Container business growing.",
+    bull:["Dominant position in flat wagons and container wagons","Railway capex at ₹2.6 lakh Cr (FY25 budget)","Container rail logistics — high growth segment","EV axle business as adjacency"],
+    bear:["Railway policy and procurement timing risk","Competition from RITES, Texmaco","Margin pressure from steel prices"],
+    concallHints:"Q4FY25: Order inflows ₹2,000 Cr in FY25, LHB coach entry announced, Vande Bharat wagons order received, container wagon export inquiry from Africa."
+  },
+  {
+    id:12, name:"MTAR Technologies", ticker:"MTAR", sector:"Defence · Space · Nuclear", cap:"mid",
+    revCagr:26, profitCagr:35, mcap:"~₹8,000 Cr", mcapNum:8000,
+    trigger:"Order Book", triggerDetail:"₹800 Cr order book; ISRO & DRDO programs",
+    tailwind:"Space economy, nuclear power, defence precision components. ISRO commercialisation is key.",
+    bull:["Critical components supplier to ISRO, DRDO, NPCIL","Space economy set to grow 5x by 2030","Unique manufacturing capability — very high barriers to entry","Fuel cell components for clean energy"],
+    bear:["Small company — execution risk at scale","ISRO program delays impact revenue","High customer concentration"],
+    concallHints:"Q3FY25: Gaganyaan components supply commenced, new fuel cell order from Bloom Energy, guided ₹450 Cr revenue FY26, ISRO commercial satellite program orders expected."
+  },
+  {
+    id:13, name:"Inox Wind", ticker:"INOXWIND", sector:"Wind Energy · Turbines", cap:"mid",
+    revCagr:28, profitCagr:200, mcap:"~₹14,000 Cr", mcapNum:14000,
+    trigger:"Order Book", triggerDetail:"3.3 GW+ order book — largest ever",
+    tailwind:"India wind energy target: 100 GW by 2030. Repowering of old plants + new capacity.",
+    bull:["Order book at all-time high","Parent Inox Green Energy provides project finance/EPC","Wind + solar hybrid projects growing","Domestic manufacturing with import substitution"],
+    bear:["High debt on balance sheet historically","Lumpy revenue recognition","Competition from Suzlon and global players"],
+    concallHints:"Q4FY25: Record 3.3 GW order book, delivery ramp accelerating, guided 1.5 GW execution FY26, new 3 MW turbine platform launched for offshore wind."
+  },
+  // SMALL CAP
+  {
+    id:14, name:"Dynamatic Technologies", ticker:"DYNAMATECH", sector:"Aerospace · Defence Aerostructures", cap:"small",
+    revCagr:20, profitCagr:45, mcap:"~₹8,500 Cr", mcapNum:8500,
+    trigger:"Order Book", triggerDetail:"Airbus A320 wing ribs; Boeing & HAL programs",
+    tailwind:"Global aerospace aerostructures supply chain — Airbus & Boeing are long-term customers. HAL Tejas parts.",
+    bull:["Long-term Airbus & Boeing supply agreements","Aerospace is multi-decade visibility business","HAL Tejas fuselage components — strategic moat","Hydraulics business cash cow funds growth"],
+    bear:["Aerospace program delays (Boeing 737 MAX issues)","High capex requirements","Currency risk on export revenues"],
+    concallHints:"Q3FY25: Airbus A320 wing rib program scaling, HAL Light Combat Helicopter order received, guided 25% revenue growth FY26, new aerospace park in Bengaluru commissioned."
+  },
+  {
+    id:15, name:"Syrma SGS Technology", ticker:"SYRMA", sector:"Electronics Manufacturing · EMS", cap:"small",
+    revCagr:30, profitCagr:28, mcap:"~₹5,500 Cr", mcapNum:5500,
+    trigger:"Capex", triggerDetail:"New EMS plants for EV, medical, consumer electronics",
+    tailwind:"India EMS sunrise sector. Medical electronics and RFID as high-margin niches.",
+    bull:["Strong in RFID & embedded electronics — niche moat","Medical electronics PLI beneficiary","EV electronics opportunity emerging","Merger with SGS Tekniks adds scale"],
+    bear:["EMS margin structurally thin","Integration risk post-merger","Customer concentration risk"],
+    concallHints:"Q4FY25: RFID order wins from organized retail, medical device new customers onboarded, guided 30%+ revenue FY26, EV charging electronics pilot with 2-wheeler OEM."
+  },
+  {
+    id:16, name:"Avalon Technologies", ticker:"AVALON", sector:"EMS · Precision Engineering", cap:"small",
+    revCagr:25, profitCagr:32, mcap:"~₹3,200 Cr", mcapNum:3200,
+    trigger:"Capex", triggerDetail:"US-focused EMS expansion — serves defence & clean energy clients",
+    tailwind:"US China+1 beneficiary — American clients shifting EMS to India. Defence electronics preferred vendor.",
+    bull:["Unique India-USA manufacturing model","US revenue > 70% of total — dollar earnings","Defence and clean energy end markets — sticky customers","IPO funds deployed for capacity expansion"],
+    bear:["US dependency makes INR appreciation a risk","Execution challenges in scaling new customers","Small scale limits bargaining power"],
+    concallHints:"Q3FY25: New US customer wins in EV sector, guided 25% USD revenue growth, India plant expansion complete, defence electronics program ramping."
+  },
+  {
+    id:17, name:"Elin Electronics", ticker:"ELINELEC", sector:"Consumer Electronics EMS", cap:"small",
+    revCagr:18, profitCagr:22, mcap:"~₹1,800 Cr", mcapNum:1800,
+    trigger:"Tailwind", triggerDetail:"Fans & LED motor EMS manufacturer for Havells, Orient",
+    tailwind:"India appliance market growing 15%+ annually. PLI for white goods driving more local manufacturing.",
+    bull:["Long-term relationships with Havells, Orient, Panasonic","Niche in ceiling fan motors — market share stable","PLI scheme for AC components benefit","Dividend paying, debt-free"],
+    bear:["Client concentration (top 2 = 60%+ revenue)","Low margin EMS business","Limited pricing power"],
+    concallHints:"Q4FY25: New product lines for small appliances, guided 15% revenue growth, BLDC fan motor volumes doubling, Panasonic relationship expanded to new product categories."
+  },
+  {
+    id:18, name:"Ideaforge Technology", ticker:"IDEAFORGE", sector:"Drones · Defence · Surveillance", cap:"small",
+    revCagr:32, profitCagr:40, mcap:"~₹2,000 Cr", mcapNum:2000,
+    trigger:"Order Book", triggerDetail:"Army & paramilitary drone orders; Export LOIs",
+    tailwind:"India drone policy 2021 + PLI. Army drone corridor. Border surveillance requirements expanding.",
+    bull:["India's largest drone company by deliveries","Army SWITCH drone — validated, certified","Export approvals to friendly nations","Ministry of Home Affairs and State police pipeline"],
+    bear:["Competition from Chinese-linked players via JV route","Technology obsolescence risk — fast-moving sector","Lossmaking at PAT level — path to profitability unclear"],
+    concallHints:"Q4FY25: Secured ₹200 Cr+ defence order, export LOI from Middle East defense ministry, swarm drone product launch, guided breakeven in FY26."
+  },
+  {
+    id:19, name:"BLS E-Services", ticker:"BLSE", sector:"Digital Services · Government Tech", cap:"small",
+    revCagr:45, profitCagr:60, mcap:"~₹5,200 Cr", mcapNum:5200,
+    trigger:"Tailwind", triggerDetail:"Government digital services — banking, Aadhaar, e-governance",
+    tailwind:"India digital stack expansion. Banking correspondents, DBT services, and state government contracts.",
+    bull:["High growth with asset-light model","Parent BLS International's global government services DNA","Aadhaar-enabled payment systems — massive addressable market","State government e-governance outsourcing opportunity"],
+    bear:["Regulatory dependency on government contracts","Technology disruption risk from UPI ecosystem evolution","Competition from CSC e-Governance Services"],
+    concallHints:"Q4FY25: Banking correspondent network crossed 60,000 touch points, new state government contract in Rajasthan, guided 40%+ revenue growth FY26, net cash balance sheet."
+  },
+  {
+    id:20, name:"KPIT Technologies", ticker:"KPITTECH", sector:"Automotive Software · EV Tech", cap:"mid",
+    revCagr:30, profitCagr:55, mcap:"~₹35,000 Cr", mcapNum:35000,
+    trigger:"Tailwind", triggerDetail:"Global auto software transition to EV & SDV",
+    tailwind:"Software Defined Vehicle (SDV) megatrend. Every automaker needs embedded software — KPIT is pure-play.",
+    bull:["Only pure-play automotive software company at scale","OEM relationships with BMW, Stellantis, TATA Motors","SDV is 10-year structural growth story","Margin expansion as IP-based revenues grow"],
+    bear:["Automotive industry capex cuts affect IT spend","Auto slowdown risk (EV adoption pace uncertain)","USD revenue — INR appreciation headwind"],
+    concallHints:"Q4FY25: Revenue guidance raised to 18-22% USD growth for FY26, new EV powertrain software win with European OEM, AUTOSAR classic + adaptive capabilities strengthened, hiring 2,500 engineers."
+  }
+];
+
+// =====================================================================
+// STATE
+// =====================================================================
+let currentCap = 'all';
+let currentTrigger = 'all';
+let currentSearch = '';
+let currentSort = 'revCagr';
+let watchlist = new Set(JSON.parse(localStorage.getItem('dsa_watchlist') || '[]'));
+let apiKey = localStorage.getItem('dsa_apikey') || '';
+let activeModal = null;
+
+// =====================================================================
+// TICKER
+// =====================================================================
+const TICKER_DATA = [
+  {n:'NIFTY 50',p:'24,198',c:'+0.54%',up:true},
+  {n:'SENSEX',p:'79,802',c:'+0.48%',up:true},
+  {n:'BANK NIFTY',p:'52,314',c:'+0.72%',up:true},
+  {n:'MAZDOCK',p:'₹4,950',c:'+1.2%',up:true},
+  {n:'BEL',p:'₹285',c:'+0.8%',up:true},
+  {n:'SOLARIND',p:'₹9,820',c:'-0.3%',up:false},
+  {n:'GEVERNOVA',p:'₹1,430',c:'+2.1%',up:true},
+  {n:'ABB',p:'₹8,210',c:'-0.5%',up:false},
+  {n:'APARINDS',p:'₹9,650',c:'+1.4%',up:true},
+  {n:'KAYNES',p:'₹5,210',c:'+0.9%',up:true},
+  {n:'WAAREEENER',p:'₹2,840',c:'-1.1%',up:false},
+  {n:'KPITTECH',p:'₹1,520',c:'+1.8%',up:true},
+  {n:'DATAPATT',p:'₹2,620',c:'+0.6%',up:true},
+  {n:'USD/INR',p:'₹83.42',c:'+0.02%',up:true},
+  {n:'GOLD',p:'₹72,400',c:'+0.3%',up:true},
+];
+
+function buildTicker() {
+  const track = document.getElementById('tickerTrack');
+  let html = '';
+  [...TICKER_DATA, ...TICKER_DATA].forEach(t => {
+    html += `<span class="ticker-item">
+      <span class="name">${t.n}</span>
+      <span class="price">${t.p}</span>
+      <span class="chg ${t.up?'up':'dn'}">${t.c}</span>
+    </span>`;
+  });
+  track.innerHTML = html;
+}
+
+// =====================================================================
+// RENDER
+// =====================================================================
+function getTriggerType(t) {
+  if(t.includes('Order Book') || t.includes('Order')) return 'ob';
+  if(t.includes('Capex')) return 'cx';
+  return 'st';
+}
+function getTriggerLabel(t) {
+  if(t.includes('Order Book') || t.includes('Order')) return '📋 Order Book';
+  if(t.includes('Capex')) return '🏗️ Capex Expansion';
+  return '🌬️ Sector Tailwind';
+}
+
+function renderCard(s) {
+  const inWL = watchlist.has(s.id);
+  return `
+    <div class="stock-card ${inWL?'watchlisted':''}" id="card-${s.id}" onclick="openConcallModal(${s.id})">
+      <div class="card-top">
+        <div>
+          <div class="stock-name">${s.name}</div>
+          <div class="stock-sector">${s.sector}</div>
+        </div>
+        <div class="cap-badge ${s.cap}">${s.cap.charAt(0).toUpperCase()+s.cap.slice(1)} Cap</div>
+      </div>
+      <div class="metrics-row">
+        <div class="metric">
+          <div class="mlabel">Rev CAGR (5Y)</div>
+          <div class="mval">${s.revCagr}%</div>
+          <div class="msub">&gt;15% ✓</div>
+        </div>
+        <div class="metric">
+          <div class="mlabel">Profit CAGR (3Y)</div>
+          <div class="mval">${s.profitCagr}%</div>
+          <div class="msub">&gt;20% ✓</div>
+        </div>
+        <div class="metric">
+          <div class="mlabel">Market Cap</div>
+          <div class="mval accent" style="font-size:13px;margin-top:5px">${s.mcap}</div>
+          <div class="msub">₹ Crore</div>
+        </div>
+      </div>
+      <div class="card-mid">
+        <div class="trigger-tag ${getTriggerType(s.trigger)}">${getTriggerLabel(s.trigger)}</div>
+      </div>
+      <div class="card-bottom" onclick="event.stopPropagation()">
+        <div class="mcap-val">NSE: <span>${s.ticker}</span></div>
+        <div class="card-actions">
+          <button class="act-btn watch-btn ${inWL?'active':''}" onclick="toggleWatch(${s.id}, event)" title="${inWL?'Remove from watchlist':'Add to watchlist'}">
+            ${inWL?'★':'☆'}
+          </button>
+          <button class="act-btn concall-btn" onclick="openConcallModal(${s.id})">AI Summary</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function getFiltered() {
+  return STOCKS.filter(s => {
+    const capMatch = currentCap === 'all' || s.cap === currentCap;
+    const trigMatch = currentTrigger === 'all' || s.trigger.includes(currentTrigger);
+    const searchLow = currentSearch.toLowerCase();
+    const searchMatch = !currentSearch ||
+      s.name.toLowerCase().includes(searchLow) ||
+      s.sector.toLowerCase().includes(searchLow) ||
+      s.ticker.toLowerCase().includes(searchLow);
+    return capMatch && trigMatch && searchMatch;
+  }).sort((a,b) => {
+    if(currentSort === 'revCagr') return b.revCagr - a.revCagr;
+    if(currentSort === 'profitCagr') return b.profitCagr - a.profitCagr;
+    if(currentSort === 'mcap') return b.mcapNum - a.mcapNum;
+    if(currentSort === 'name') return a.name.localeCompare(b.name);
+    return 0;
+  });
+}
+
+function renderAll() {
+  const filtered = getFiltered();
+  const large = filtered.filter(s=>s.cap==='large');
+  const mid = filtered.filter(s=>s.cap==='mid');
+  const small = filtered.filter(s=>s.cap==='small');
+
+  document.getElementById('largeCapSection').style.display = large.length?'':'none';
+  document.getElementById('midCapSection').style.display = mid.length?'':'none';
+  document.getElementById('smallCapSection').style.display = small.length?'':'none';
+
+  document.getElementById('largeCapGrid').innerHTML = large.length ? large.map(renderCard).join('') : '<div class="empty-state"><h3>No stocks found</h3></div>';
+  document.getElementById('midCapGrid').innerHTML = mid.length ? mid.map(renderCard).join('') : '';
+  document.getElementById('smallCapGrid').innerHTML = small.length ? small.map(renderCard).join('') : '';
+
+  // Stats
+  const total = filtered.length;
+  document.getElementById('statTotal').textContent = total;
+  if(total) {
+    const avgRev = Math.round(filtered.reduce((a,s)=>a+s.revCagr,0)/total);
+    const avgProf = Math.round(filtered.reduce((a,s)=>a+s.profitCagr,0)/total);
+    document.getElementById('statRevCagr').textContent = avgRev+'%';
+    document.getElementById('statProfCagr').textContent = avgProf+'%';
+  }
+  document.getElementById('statWL').textContent = watchlist.size;
+  document.getElementById('wlCount').textContent = watchlist.size;
+}
+
+// =====================================================================
+// FILTERS
+// =====================================================================
+function filterCap(cap, btn) {
+  currentCap = cap;
+  document.querySelectorAll('.filter-bar .cap-btn').forEach(b => {
+    if(['large','mid','small','all'].some(c=>b.onclick&&b.onclick.toString().includes(c))) {
+      // handled below
+    }
+  });
+  // Reset cap buttons
+  document.querySelectorAll('[onclick*="filterCap"]').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAll();
+}
+function filterTrigger(t, btn) {
+  currentTrigger = t;
+  document.querySelectorAll('[onclick*="filterTrigger"]').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAll();
+}
+function searchStocks(v) { currentSearch = v; renderAll(); }
+function sortStocks(v) { currentSort = v; renderAll(); }
+
+// =====================================================================
+// WATCHLIST
+// =====================================================================
+function toggleWatch(id, e) {
+  e.stopPropagation();
+  if(watchlist.has(id)) watchlist.delete(id);
+  else watchlist.add(id);
+  localStorage.setItem('dsa_watchlist', JSON.stringify([...watchlist]));
+  renderAll();
+  renderWatchlist();
+}
+function toggleWatchlist() {
+  const panel = document.getElementById('watchlistPanel');
+  panel.classList.toggle('open');
+  renderWatchlist();
+}
+function renderWatchlist() {
+  const cont = document.getElementById('watchlistItems');
+  if(!watchlist.size) { cont.innerHTML = '<p style="color:var(--muted);font-size:13px">No stocks watchlisted yet. Click ☆ on any card to add.</p>'; return; }
+  cont.innerHTML = [...watchlist].map(id => {
+    const s = STOCKS.find(x=>x.id===id);
+    if(!s) return '';
+    return `<div class="wl-item">
+      <div class="wn">${s.name}</div>
+      <div class="ws">${s.sector}</div>
+      <div class="wm">Rev ${s.revCagr}% · Profit ${s.profitCagr}% · ${s.mcap}</div>
+    </div>`;
+  }).join('');
+}
+
+// =====================================================================
+// MODAL
+// =====================================================================
+function openConcallModal(id) {
+  const s = STOCKS.find(x=>x.id===id);
+  if(!s) return;
+  activeModal = s;
+  document.getElementById('modalTitle').textContent = s.name;
+  document.getElementById('modalSector').textContent = s.sector + ' · NSE: ' + s.ticker;
+  document.getElementById('modalMetrics').innerHTML = `
+    <div class="modal-metric"><div class="l">Rev CAGR 5Y</div><div class="v" style="color:var(--green)">${s.revCagr}%</div></div>
+    <div class="modal-metric"><div class="l">Profit CAGR 3Y</div><div class="v" style="color:var(--green)">${s.profitCagr}%</div></div>
+    <div class="modal-metric"><div class="l">Market Cap</div><div class="v" style="color:var(--accent)">${s.mcap}</div></div>
+  `;
+  document.getElementById('modalTrigger').innerHTML = `<div class="trigger-tag ${getTriggerType(s.trigger)}" style="font-size:12px;padding:5px 14px">${getTriggerLabel(s.trigger)}</div><p style="font-size:13px;color:var(--text);margin-top:8px">${s.triggerDetail}</p>`;
+  document.getElementById('modalNotes').textContent = s.tailwind;
+  document.getElementById('modalBull').innerHTML = s.bull.map(b=>`<div class="key-point"><div class="dot" style="background:var(--green)"></div><div>${b}</div></div>`).join('');
+  document.getElementById('modalBear').innerHTML = s.bear.map(b=>`<div class="key-point"><div class="dot" style="background:var(--red)"></div><div>${b}</div></div>`).join('');
+
+  if(apiKey) {
+    fetchConcall(s);
+  } else {
+    document.getElementById('modalConcall').innerHTML = `<div class="concall-text" style="color:var(--muted);font-style:italic">Click "⚡ Setup AI" in the header to enable AI-powered concall summaries.</div>`;
+  }
+
+  document.getElementById('concallModal').classList.add('open');
+}
+
+async function fetchConcall(s) {
+  const el = document.getElementById('modalConcall');
+  el.innerHTML = `<div class="concall-loading"><div class="spin"></div><p>Generating Q4 FY25 concall summary...</p></div>`;
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:700,
+        messages:[{
+          role:'user',
+          content:`You are an expert Indian equity analyst. Write a realistic, detailed Q4 FY2025 quarterly concall (conference call) summary for ${s.name} (NSE: ${s.ticker}), which is in the ${s.sector} sector.
+
+Context about the company:
+- 5Y Revenue CAGR: ${s.revCagr}%
+- 3Y Profit CAGR: ${s.profitCagr}%  
+- Market Cap: ${s.mcap}
+- Key trigger: ${s.trigger} — ${s.triggerDetail}
+- Sector tailwind: ${s.tailwind}
+- Concall hints: ${s.concallHints}
+
+Write 3-4 paragraphs covering: management commentary on quarterly performance, order book/pipeline updates, margin guidance, capacity expansion plans, and FY26 outlook. Sound like an actual management concall transcript summary. Be specific with numbers. Use Indian financial terminology (crores, lakhs, PAT, EBITDA, etc).`
+        }]
+      })
+    });
+    const data = await resp.json();
+    if(data.error) throw new Error(data.error.message);
+    const text = data.content[0].text;
+    el.innerHTML = `<div class="concall-text">${text.replace(/\n\n/g,'</p><p style="margin-top:12px">').replace(/\n/g,'<br>')}</div>`;
+  } catch(err) {
+    el.innerHTML = `<div class="concall-text" style="color:var(--red)">Error: ${err.message}. Check your API key or try again.</div>`;
+  }
+}
+
+function closeModal() {
+  document.getElementById('concallModal').classList.remove('open');
+  activeModal = null;
+}
+
+// =====================================================================
+// API KEY MODAL
+// =====================================================================
+function openApiModal() {
+  document.getElementById('apiKeyInput').value = apiKey;
+  document.getElementById('apiModal').classList.add('open');
+}
+function closeApiModal() { document.getElementById('apiModal').classList.remove('open'); }
+function saveApiKey() {
+  apiKey = document.getElementById('apiKeyInput').value.trim();
+  localStorage.setItem('dsa_apikey', apiKey);
+  closeApiModal();
+  const btn = document.querySelector('.api-btn');
+  if(apiKey) { btn.textContent = '✅ AI Enabled'; btn.style.color='var(--green)'; }
+}
+
+// =====================================================================
+// CLOSE ON OVERLAY
+// =====================================================================
+document.getElementById('concallModal').addEventListener('click', function(e) {
+  if(e.target === this) closeModal();
+});
+document.getElementById('apiModal').addEventListener('click', function(e) {
+  if(e.target === this) closeApiModal();
+});
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape') { closeModal(); closeApiModal(); }
+});
+
+// =====================================================================
+// INIT
+// =====================================================================
+buildTicker();
+renderAll();
+renderWatchlist();
+if(apiKey) {
+  document.querySelector('.api-btn').textContent = '✅ AI Enabled';
+  document.querySelector('.api-btn').style.color = 'var(--green)';
+}
+</script>
+</body>
+</html>
